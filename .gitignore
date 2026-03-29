@@ -1,0 +1,16 @@
+.DS_Store
+**/.pytest_cache/
+**/.ruff_cache/
+**/.venv/
+**/__pycache__/
+node_modules/
+dist/
+coverage/
+htmlcov/
+backend/.coverage
+backend/.env
+backend/.env.local
+backend/airzone.db
+backend/alembic.ini
+frontend/.env
+frontend/.env.local
