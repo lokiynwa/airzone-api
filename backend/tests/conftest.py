@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from app.db.base import Base
 from app.db.session import build_engine, get_db
 from app.main import create_app
+from app.services.aircraft_search import clear_aircraft_search_cache
 
 
 @pytest.fixture
@@ -31,6 +32,16 @@ def client(tmp_path) -> Generator[TestClient, None, None]:
         yield test_client
 
     app.dependency_overrides.clear()
+    clear_aircraft_search_cache()
     Base.metadata.drop_all(bind=engine)
     engine.dispose()
 
+
+@pytest.fixture
+def authenticated_client(client: TestClient) -> TestClient:
+    response = client.post(
+        "/api/v1/auth/register",
+        json={"email": "pilot@example.com", "password": "supersecure"},
+    )
+    assert response.status_code == 201
+    return client

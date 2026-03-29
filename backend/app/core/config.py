@@ -19,6 +19,12 @@ class Settings(BaseSettings):
     )
     nominatim_base_url: str = "https://nominatim.openstreetmap.org"
     nominatim_user_agent: str = "airzone-api/0.1 (local development)"
+    opensky_base_url: str = "https://opensky-network.org"
+    opensky_auth_url: str = (
+        "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token"
+    )
+    opensky_client_id: str | None = None
+    opensky_client_secret: str | None = None
 
     model_config = SettingsConfigDict(
         env_file=".env",

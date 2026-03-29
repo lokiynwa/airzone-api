@@ -32,3 +32,6 @@ def get_current_user(
         )
 
     return user
+
+
+AuthenticatedUser = Annotated[User, Depends(get_current_user)]

@@ -4,7 +4,7 @@ from httpx import Response
 
 
 @respx.mock
-def test_geocode_caches_external_results(client: TestClient) -> None:
+def test_geocode_caches_external_results(authenticated_client: TestClient) -> None:
     route = respx.get("https://nominatim.openstreetmap.org/search").mock(
         return_value=Response(
             200,
@@ -18,8 +18,8 @@ def test_geocode_caches_external_results(client: TestClient) -> None:
         )
     )
 
-    first_response = client.get("/api/v1/locations/geocode", params={"q": "London"})
-    second_response = client.get("/api/v1/locations/geocode", params={"q": "London"})
+    first_response = authenticated_client.get("/api/v1/locations/geocode", params={"q": "London"})
+    second_response = authenticated_client.get("/api/v1/locations/geocode", params={"q": "London"})
 
     assert first_response.status_code == 200
     assert second_response.status_code == 200
@@ -29,18 +29,29 @@ def test_geocode_caches_external_results(client: TestClient) -> None:
 
 
 @respx.mock
-def test_geocode_returns_empty_results_for_unknown_location(client: TestClient) -> None:
+def test_geocode_returns_empty_results_for_unknown_location(
+    authenticated_client: TestClient,
+) -> None:
     respx.get("https://nominatim.openstreetmap.org/search").mock(
         return_value=Response(200, json=[])
     )
 
-    response = client.get("/api/v1/locations/geocode", params={"q": "asldkfjalskdfj"})
+    response = authenticated_client.get(
+        "/api/v1/locations/geocode",
+        params={"q": "asldkfjalskdfj"},
+    )
 
     assert response.status_code == 200
     assert response.json() == {"query": "asldkfjalskdfj", "results": []}
 
 
-def test_geocode_rejects_blank_query(client: TestClient) -> None:
-    response = client.get("/api/v1/locations/geocode", params={"q": " "})
+def test_geocode_rejects_blank_query(authenticated_client: TestClient) -> None:
+    response = authenticated_client.get("/api/v1/locations/geocode", params={"q": " "})
 
     assert response.status_code == 422
+
+
+def test_geocode_requires_authentication(client: TestClient) -> None:
+    response = client.get("/api/v1/locations/geocode", params={"q": "London"})
+
+    assert response.status_code == 401
