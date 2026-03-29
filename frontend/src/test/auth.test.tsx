@@ -6,6 +6,17 @@ import { App } from "../App";
 
 const fetchMock = vi.fn();
 
+vi.mock("react-leaflet", () => ({
+  MapContainer: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  TileLayer: () => null,
+  CircleMarker: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  Popup: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  useMap: () => ({
+    getZoom: () => 8,
+    setView: vi.fn(),
+  }),
+}));
+
 describe("authentication shell", () => {
   beforeEach(() => {
     vi.stubGlobal("fetch", fetchMock);
@@ -62,9 +73,99 @@ describe("authentication shell", () => {
     window.history.pushState({}, "", "/app");
     render(<App />);
 
-    await waitFor(() =>
-      expect(screen.getByText(/the map search interface lands in the next stage/i)).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText(/search radius/i)).toBeInTheDocument());
     expect(screen.getByText(/signed in as/i)).toHaveTextContent("pilot@example.com");
+  });
+
+  it("searches for aircraft and renders partial result badges", async () => {
+    fetchMock.mockImplementation((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("/auth/me")) {
+        return Promise.resolve(
+          new Response(JSON.stringify({ user: { id: 1, email: "pilot@example.com" } }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+        );
+      }
+      if (url.includes("/locations/geocode")) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              query: "London",
+              results: [{ label: "London, United Kingdom", lat: 51.5074, lon: -0.1278 }],
+            }),
+            {
+              status: 200,
+              headers: { "Content-Type": "application/json" },
+            },
+          ),
+        );
+      }
+      if (url.includes("/aircraft/search")) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              search_center: { lat: 51.5074, lon: -0.1278, label: "London, United Kingdom" },
+              radius_km: 25,
+              provider_meta: {
+                opensky_used: true,
+                enrichment_used: true,
+                partial_results: true,
+              },
+              results: [
+                {
+                  icao24: "400001",
+                  callsign: "BAW123",
+                  airline_name: null,
+                  flight_number: "123",
+                  flight_iata: null,
+                  flight_icao: "BAW123",
+                  origin_airport: null,
+                  destination_airport: null,
+                  arrival_time_estimated: null,
+                  position: {
+                    latitude: 51.5,
+                    longitude: -0.12,
+                    altitude_m: 10000,
+                    heading_deg: 120,
+                    speed_kph: 700,
+                    last_seen_at: "2026-03-29T12:00:00Z",
+                  },
+                  is_civil_best_effort: true,
+                  missing_fields: [
+                    "airline_name",
+                    "origin_airport",
+                    "destination_airport",
+                    "arrival_time_estimated",
+                  ],
+                  enrichment_status: "not_available",
+                },
+              ],
+            }),
+            {
+              status: 200,
+              headers: { "Content-Type": "application/json" },
+            },
+          ),
+        );
+      }
+
+      return Promise.reject(new Error(`Unhandled request: ${url}`));
+    });
+
+    window.history.pushState({}, "", "/app");
+    const user = userEvent.setup();
+    render(<App />);
+
+    await screen.findByText(/airzone flight deck/i);
+    await user.type(screen.getByPlaceholderText(/search for a city or airport/i), "London");
+    await user.click(await screen.findByRole("button", { name: /london, united kingdom/i }));
+    await user.click(screen.getByRole("button", { name: /search aircraft/i }));
+
+    const matches = await screen.findAllByText("BAW123");
+    expect(matches.length).toBeGreaterThan(0);
+    expect(screen.getByText(/partial data/i)).toBeInTheDocument();
+    expect(screen.getByText(/some flights are missing route or eta data/i)).toBeInTheDocument();
   });
 });

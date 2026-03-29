@@ -181,6 +181,18 @@ input {
   margin-top: 1.5rem;
 }
 
+.workspace-layout {
+  display: grid;
+  grid-template-columns: minmax(320px, 380px) 1fr;
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.workspace-panel {
+  display: grid;
+  gap: 1.5rem;
+}
+
 .feature-card {
   padding: 1.75rem;
   border-radius: 1.5rem;
@@ -188,6 +200,119 @@ input {
 
 .feature-card h2 {
   margin-top: 0;
+}
+
+.search-card,
+.results-panel,
+.map-panel {
+  min-height: 16rem;
+}
+
+.field-group {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  font-weight: 600;
+}
+
+.field-group input[type="range"] {
+  padding: 0;
+}
+
+.suggestions-list {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 0.85rem;
+}
+
+.suggestion-button,
+.result-card {
+  width: 100%;
+  border: 1px solid rgba(18, 32, 43, 0.08);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 0.9rem 1rem;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 160ms ease, transform 160ms ease;
+}
+
+.suggestion-button:hover,
+.result-card:hover,
+.result-card.is-active {
+  border-color: rgba(12, 139, 176, 0.55);
+  transform: translateY(-1px);
+}
+
+.results-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.results-header p {
+  margin: 0.35rem 0 0;
+  color: #516777;
+}
+
+.results-count {
+  min-width: 2.5rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  background: rgba(21, 95, 143, 0.1);
+  text-align: center;
+  font-weight: 700;
+}
+
+.result-card + .result-card {
+  margin-top: 0.75rem;
+}
+
+.result-card p {
+  margin: 0.35rem 0 0;
+  color: #395264;
+}
+
+.result-topline {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.8rem;
+  align-items: center;
+}
+
+.result-badge {
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.badge-complete {
+  background: rgba(32, 133, 86, 0.16);
+  color: #175736;
+}
+
+.badge-partial {
+  background: rgba(240, 145, 48, 0.16);
+  color: #7d4a11;
+}
+
+.map-panel {
+  overflow: hidden;
+  border-radius: 1.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow: 0 24px 60px rgba(31, 69, 92, 0.12);
+}
+
+.results-map {
+  width: 100%;
+  min-height: 38rem;
+}
+
+.empty-state {
+  color: #516777;
 }
 
 @media (max-width: 900px) {
@@ -207,5 +332,12 @@ input {
   .dashboard-panels {
     grid-template-columns: 1fr;
   }
-}
 
+  .workspace-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .results-map {
+    min-height: 24rem;
+  }
+}
