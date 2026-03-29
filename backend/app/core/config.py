@@ -25,6 +25,8 @@ class Settings(BaseSettings):
     )
     opensky_client_id: str | None = None
     opensky_client_secret: str | None = None
+    aviationstack_base_url: str = "https://api.aviationstack.com/v1"
+    aviationstack_api_key: str | None = None
 
     model_config = SettingsConfigDict(
         env_file=".env",
