@@ -126,6 +126,8 @@ def _airport_reference(raw_airport) -> AirportReference | None:
         name=raw_airport.name,
         iata=raw_airport.iata,
         icao=raw_airport.icao,
+        latitude=getattr(raw_airport, "latitude", None),
+        longitude=getattr(raw_airport, "longitude", None),
     )
 
 

@@ -257,7 +257,9 @@ def test_aircraft_search_applies_public_route_enrichment_without_aviationstack(
     assert result["airline_name"] == "easyJet"
     assert result["flight_iata"] == "U289VK"
     assert result["origin_airport"]["iata"] == "BFS"
+    assert result["origin_airport"]["latitude"] == 54.6575
     assert result["destination_airport"]["icao"] == "EGGP"
+    assert result["destination_airport"]["longitude"] == -2.84972
     assert result["arrival_time_estimated"] is not None
     assert result["enrichment_status"] == "complete"
     assert response.json()["provider_meta"]["enrichment_used"] is True

@@ -14,6 +14,8 @@ class AirportReference(BaseModel):
     name: str | None = None
     iata: str | None = None
     icao: str | None = None
+    latitude: float | None = None
+    longitude: float | None = None
 
 
 class AircraftPosition(BaseModel):
@@ -52,4 +54,3 @@ class AircraftSearchResponse(BaseModel):
     radius_km: float
     results: list[AircraftResult]
     provider_meta: ProviderMeta
-

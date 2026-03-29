@@ -15,6 +15,8 @@ export type AirportReference = {
   name: string | null;
   iata: string | null;
   icao: string | null;
+  latitude: number | null;
+  longitude: number | null;
 };
 
 export type AircraftPosition = {
@@ -79,4 +81,3 @@ export async function searchAircraft(params: {
 
   return apiFetch<AircraftSearchResponse>(`/aircraft/search?${searchParams.toString()}`);
 }
-

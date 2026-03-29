@@ -9,12 +9,15 @@ const fetchMock = vi.fn();
 vi.mock("react-leaflet", () => ({
   MapContainer: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   TileLayer: () => null,
+  Marker: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   CircleMarker: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  Polyline: () => null,
   Popup: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   useMap: () => ({
     getZoom: () => 8,
     setView: vi.fn(),
   }),
+  useMapEvents: () => ({}),
 }));
 
 describe("authentication shell", () => {
@@ -77,7 +80,7 @@ describe("authentication shell", () => {
     expect(screen.getByText(/signed in as/i)).toHaveTextContent("pilot@example.com");
   });
 
-  it("searches for aircraft and renders partial result badges", async () => {
+  it("searches for aircraft and renders route details with full airport names", async () => {
     fetchMock.mockImplementation((input: RequestInfo | URL) => {
       const url = String(input);
       if (url.includes("/auth/me")) {
@@ -121,9 +124,21 @@ describe("authentication shell", () => {
                   flight_number: "123",
                   flight_iata: null,
                   flight_icao: "BAW123",
-                  origin_airport: null,
-                  destination_airport: null,
-                  arrival_time_estimated: null,
+                  origin_airport: {
+                    name: "Heathrow Airport",
+                    iata: "LHR",
+                    icao: "EGLL",
+                    latitude: 51.4706,
+                    longitude: -0.461941,
+                  },
+                  destination_airport: {
+                    name: "Manchester Airport",
+                    iata: "MAN",
+                    icao: "EGCC",
+                    latitude: 53.3537,
+                    longitude: -2.27495,
+                  },
+                  arrival_time_estimated: "2026-03-29T13:15:00Z",
                   position: {
                     latitude: 51.5,
                     longitude: -0.12,
@@ -135,11 +150,9 @@ describe("authentication shell", () => {
                   is_civil_best_effort: true,
                   missing_fields: [
                     "airline_name",
-                    "origin_airport",
-                    "destination_airport",
-                    "arrival_time_estimated",
+                    "flight_iata",
                   ],
-                  enrichment_status: "not_available",
+                  enrichment_status: "partial",
                 },
               ],
             }),
@@ -165,7 +178,15 @@ describe("authentication shell", () => {
 
     const matches = await screen.findAllByText("BAW123");
     expect(matches.length).toBeGreaterThan(0);
-    expect(screen.getByText(/partial data/i)).toBeInTheDocument();
-    expect(screen.getByText(/some flights are missing route or eta data/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/partial data/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/some flights are still missing route or eta data/i)).toBeInTheDocument();
+    expect(
+      screen.getAllByText(/heathrow airport \(LHR \/ EGLL\) to manchester airport \(MAN \/ EGCC\)/i)
+        .length,
+    ).toBeGreaterThan(0);
+    expect(screen.getByText(/origin: heathrow airport \(LHR \/ EGLL\)/i)).toBeInTheDocument();
+    expect(screen.getByText(/destination: manchester airport \(MAN \/ EGCC\)/i)).toBeInTheDocument();
+    expect(screen.getByText(/selected flight/i)).toBeInTheDocument();
+    expect(screen.getByText(/last updated:/i)).toBeInTheDocument();
   });
 });
