@@ -12,10 +12,13 @@ class Settings(BaseSettings):
     session_cookie_name: str = "airzone_session"
     session_cookie_secure: bool = False
     session_ttl_hours: int = 168
+    http_timeout_seconds: float = 10.0
     cors_allow_origins_raw: str = Field(
         default="http://127.0.0.1:5173,http://localhost:5173",
         alias="CORS_ALLOW_ORIGINS",
     )
+    nominatim_base_url: str = "https://nominatim.openstreetmap.org"
+    nominatim_user_agent: str = "airzone-api/0.1 (local development)"
 
     model_config = SettingsConfigDict(
         env_file=".env",
