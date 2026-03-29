@@ -11,6 +11,5 @@ backend/.coverage
 backend/.env
 backend/.env.local
 backend/airzone.db
-backend/alembic.ini
 frontend/.env
 frontend/.env.local

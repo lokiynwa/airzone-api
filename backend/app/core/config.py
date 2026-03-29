@@ -11,8 +11,10 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./airzone.db"
     session_cookie_name: str = "airzone_session"
     session_cookie_secure: bool = False
-    cors_allow_origins: list[str] = Field(
-        default_factory=lambda: ["http://127.0.0.1:5173", "http://localhost:5173"]
+    session_ttl_hours: int = 168
+    cors_allow_origins_raw: str = Field(
+        default="http://127.0.0.1:5173,http://localhost:5173",
+        alias="CORS_ALLOW_ORIGINS",
     )
 
     model_config = SettingsConfigDict(
@@ -21,8 +23,15 @@ class Settings(BaseSettings):
         case_sensitive=False,
     )
 
+    @property
+    def cors_allow_origins(self) -> list[str]:
+        return [
+            origin.strip()
+            for origin in self.cors_allow_origins_raw.split(",")
+            if origin.strip()
+        ]
+
 
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
-
