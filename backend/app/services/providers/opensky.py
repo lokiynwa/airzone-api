@@ -8,8 +8,8 @@ from app.core.config import Settings
 from app.services.cache import TTLMemoryCache
 from app.services.geo import BoundingBox
 
-_CALLSIGN_PATTERN = re.compile(r"^(?P<prefix>[A-Z]{3})(?P<number>\d{1,4}[A-Z]?)$")
-_DISALLOWED_CATEGORIES = {0, 1, 11, 13, 14, 15, 16, 17, 18, 19, 20}
+_CALLSIGN_PATTERN = re.compile(r"^(?P<prefix>[A-Z]{3})(?P<number>\d{1,4}[A-Z]{0,3})$")
+_CLEARLY_NON_CIVIL_CATEGORIES = {13, 14, 15, 16, 17, 18, 19, 20}
 
 
 @dataclass(frozen=True)
@@ -24,6 +24,7 @@ class OpenSkyAircraftState:
     last_seen_at: datetime | None
     on_ground: bool
     category: int | None
+    is_civil_best_effort: bool
     flight_number: str | None
     flight_icao: str | None
 
@@ -115,8 +116,6 @@ class OpenSkyClient:
 
         if not callsign or latitude is None or longitude is None or on_ground:
             return None
-        if category in _DISALLOWED_CATEGORIES:
-            return None
 
         flight_match = _CALLSIGN_PATTERN.match(callsign)
         flight_number = flight_match.group("number") if flight_match else None
@@ -138,6 +137,7 @@ class OpenSkyClient:
             ),
             on_ground=on_ground,
             category=int(category) if category is not None else None,
+            is_civil_best_effort=category not in _CLEARLY_NON_CIVIL_CATEGORIES,
             flight_number=flight_number,
             flight_icao=flight_icao,
         )

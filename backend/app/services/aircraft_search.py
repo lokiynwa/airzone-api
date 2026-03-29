@@ -1,4 +1,5 @@
 import asyncio
+from datetime import UTC, datetime, timedelta
 
 from app.core.config import Settings
 from app.schemas.aircraft import (
@@ -11,9 +12,13 @@ from app.schemas.aircraft import (
 )
 from app.services.cache import TTLMemoryCache
 from app.services.geo import bounding_box_for_radius, haversine_km
+from app.services.providers.adsbdb import (
+    AdsbdbClient,
+    RouteAirport,
+    clear_adsbdb_cache,
+)
 from app.services.providers.aviationstack import (
     AviationstackClient,
-    AviationstackClientError,
     clear_aviationstack_cache,
 )
 from app.services.providers.opensky import OpenSkyClient
@@ -41,6 +46,7 @@ def clear_aircraft_search_cache() -> None:
 
 def clear_provider_caches() -> None:
     clear_aircraft_search_cache()
+    clear_adsbdb_cache()
     clear_aviationstack_cache()
 
 
@@ -87,6 +93,32 @@ async def _lookup_enrichment(
     return mapped, True
 
 
+async def _lookup_route_data(
+    *,
+    settings: Settings,
+    results: list[AircraftResult],
+) -> tuple[dict[str, object], bool]:
+    callsigns = sorted({result.callsign for result in results if result.callsign})
+    if not callsigns:
+        return {}, False
+
+    provider = AdsbdbClient(settings)
+    semaphore = asyncio.Semaphore(12)
+
+    async def fetch(callsign: str) -> object:
+        async with semaphore:
+            return await provider.lookup_callsign(callsign)
+
+    responses = await asyncio.gather(
+        *(fetch(callsign) for callsign in callsigns),
+        return_exceptions=True,
+    )
+    mapped: dict[str, object] = {}
+    for callsign, response in zip(callsigns, responses, strict=True):
+        mapped[callsign] = response
+    return mapped, True
+
+
 def _airport_reference(raw_airport) -> AirportReference | None:
     if raw_airport is None:
         return None
@@ -95,6 +127,32 @@ def _airport_reference(raw_airport) -> AirportReference | None:
         iata=raw_airport.iata,
         icao=raw_airport.icao,
     )
+
+
+def _estimated_arrival_time(
+    *,
+    result: AircraftResult,
+    destination_airport: RouteAirport | None,
+) -> datetime | None:
+    if destination_airport is None:
+        return None
+    if destination_airport.latitude is None or destination_airport.longitude is None:
+        return None
+    if result.position.speed_kph is None or result.position.speed_kph < 80:
+        return None
+
+    distance_km = haversine_km(
+        lat1=result.position.latitude,
+        lon1=result.position.longitude,
+        lat2=destination_airport.latitude,
+        lon2=destination_airport.longitude,
+    )
+    if distance_km <= 3:
+        return result.position.last_seen_at or datetime.now(UTC)
+
+    effective_speed_kph = max(result.position.speed_kph, 200.0)
+    base_time = result.position.last_seen_at or datetime.now(UTC)
+    return base_time + timedelta(hours=distance_km / effective_speed_kph)
 
 
 async def search_aircraft(
@@ -133,55 +191,84 @@ async def search_aircraft(
                 speed_kph=state.speed_kph,
                 last_seen_at=state.last_seen_at,
             ),
-            is_civil_best_effort=True,
+            is_civil_best_effort=state.is_civil_best_effort,
             missing_fields=[],
-            enrichment_status="not_requested",
+            enrichment_status="not_available",
         )
         result.missing_fields = _missing_fields(result)
         results_with_distance.append((distance, result))
 
     results = [result for _, result in sorted(results_with_distance, key=lambda item: item[0])]
-    lookup_results, enrichment_used = await _lookup_enrichment(settings=settings, results=results)
+    route_lookup_results, route_lookup_used = await _lookup_route_data(
+        settings=settings,
+        results=results,
+    )
+    route_enriched_callsigns: set[str] = set()
+    for result in results:
+        route_lookup = route_lookup_results.get(result.callsign)
+        if (
+            not isinstance(route_lookup, Exception)
+            and route_lookup is not None
+            and route_lookup.found
+        ):
+            route_enrichment = route_lookup.enrichment
+            if route_enrichment is not None:
+                result.airline_name = route_enrichment.airline_name or result.airline_name
+                result.flight_number = route_enrichment.flight_number or result.flight_number
+                result.flight_iata = route_enrichment.flight_iata or result.flight_iata
+                result.flight_icao = route_enrichment.flight_icao or result.flight_icao
+                result.origin_airport = _airport_reference(route_enrichment.origin_airport)
+                result.destination_airport = _airport_reference(
+                    route_enrichment.destination_airport
+                )
+                result.arrival_time_estimated = (
+                    result.arrival_time_estimated
+                    or _estimated_arrival_time(
+                        result=result,
+                        destination_airport=route_enrichment.destination_airport,
+                    )
+                )
+                route_enriched_callsigns.add(result.callsign)
+    aviationstack_results, aviationstack_used = await _lookup_enrichment(
+        settings=settings,
+        results=results,
+    )
+    enrichment_used = route_lookup_used or aviationstack_used
     partial_results = False
     for result in results:
-        if not result.flight_icao:
-            result.missing_fields = _missing_fields(result)
-            partial_results = partial_results or bool(result.missing_fields)
-            continue
+        enrichment_applied = result.callsign in route_enriched_callsigns
 
-        lookup = lookup_results.get(result.flight_icao)
-        if lookup is None:
-            result.enrichment_status = "not_requested"
-            result.missing_fields = _missing_fields(result)
-            partial_results = partial_results or bool(result.missing_fields)
-            continue
-        if isinstance(lookup, Exception):
-            if isinstance(lookup, AviationstackClientError):
-                result.enrichment_status = "not_available"
-            else:
-                result.enrichment_status = "not_available"
-            result.missing_fields = _missing_fields(result)
-            partial_results = partial_results or bool(result.missing_fields)
-            continue
-        if not lookup.found or lookup.enrichment is None:
-            result.enrichment_status = "not_available"
-            result.missing_fields = _missing_fields(result)
-            partial_results = partial_results or bool(result.missing_fields)
-            continue
+        lookup = aviationstack_results.get(result.flight_icao) if result.flight_icao else None
+        if (
+            lookup is not None
+            and not isinstance(lookup, Exception)
+            and lookup.found
+            and lookup.enrichment is not None
+        ):
+            enrichment = lookup.enrichment
+            result.airline_name = enrichment.airline_name or result.airline_name
+            result.flight_number = enrichment.flight_number or result.flight_number
+            result.flight_iata = enrichment.flight_iata or result.flight_iata
+            result.flight_icao = enrichment.flight_icao or result.flight_icao
+            result.origin_airport = (
+                _airport_reference(enrichment.origin_airport) or result.origin_airport
+            )
+            result.destination_airport = (
+                _airport_reference(enrichment.destination_airport) or result.destination_airport
+            )
+            result.arrival_time_estimated = (
+                enrichment.arrival_time_estimated or result.arrival_time_estimated
+            )
+            enrichment_applied = True
 
-        enrichment = lookup.enrichment
-        result.airline_name = enrichment.airline_name or result.airline_name
-        result.flight_number = enrichment.flight_number or result.flight_number
-        result.flight_iata = enrichment.flight_iata or result.flight_iata
-        result.flight_icao = enrichment.flight_icao or result.flight_icao
-        result.origin_airport = _airport_reference(enrichment.origin_airport)
-        result.destination_airport = _airport_reference(enrichment.destination_airport)
-        result.arrival_time_estimated = enrichment.arrival_time_estimated
         result.missing_fields = _missing_fields(result)
-        enrichment_missing = [
-            field for field in result.missing_fields if field in _ENRICHMENT_FIELDS
-        ]
-        result.enrichment_status = "complete" if not enrichment_missing else "partial"
+        if enrichment_applied:
+            enrichment_missing = [
+                field for field in result.missing_fields if field in _ENRICHMENT_FIELDS
+            ]
+            result.enrichment_status = "complete" if not enrichment_missing else "partial"
+        else:
+            result.enrichment_status = "not_available"
         partial_results = partial_results or bool(result.missing_fields)
 
     response = AircraftSearchResponse(

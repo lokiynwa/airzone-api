@@ -12,7 +12,7 @@ Airzone is a local-first aircraft search app for exploring live civil flights ar
 - Secure signup, login, logout, and `/auth/me` session bootstrap
 - Protected location geocoding and aircraft search endpoints
 - Live aircraft search from OpenSky with exact radius filtering
-- Optional aviationstack enrichment for airline, route, and ETA data
+- Public callsign route enrichment via ADSBDB, with optional aviationstack enhancement when configured
 - Map-first local UI with search suggestions, aircraft cards, and partial-data badges
 
 ## Local setup
@@ -87,5 +87,6 @@ npm run build
 ## Data-source notes
 
 - OpenSky provides live aircraft state vectors and spatial filtering.
-- aviationstack enrichment is optional; when it is missing or rate-limited, Airzone still returns partial aircraft results.
+- ADSBDB provides public airline and route enrichment for many live callsigns without requiring a key.
+- aviationstack enrichment is optional; when it is missing or rate-limited, Airzone falls back to ADSBDB route data and best-effort ETA estimation.
 - Nominatim powers the location lookup used by the local frontend search box.
