@@ -1,0 +1,211 @@
+:root {
+  font-family: "Avenir Next", "Helvetica Neue", sans-serif;
+  color: #12202b;
+  background:
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.85), transparent 35%),
+    linear-gradient(135deg, #dcecf6 0%, #eef5f8 38%, #c6d9e8 100%);
+  line-height: 1.5;
+  font-weight: 400;
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+a {
+  color: #155f8f;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+.screen-shell {
+  min-height: 100vh;
+  padding: 2rem;
+}
+
+.auth-hero,
+.dashboard-shell {
+  max-width: 1100px;
+  margin: 0 auto;
+  min-height: calc(100vh - 4rem);
+  display: grid;
+  grid-template-columns: 1.2fr 0.9fr;
+  gap: 2rem;
+  align-items: center;
+}
+
+.auth-copy,
+.dashboard-header,
+.feature-card,
+.auth-card,
+.loading-card {
+  backdrop-filter: blur(18px);
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow: 0 24px 60px rgba(31, 69, 92, 0.12);
+}
+
+.auth-copy,
+.dashboard-header {
+  padding: 2.5rem;
+  border-radius: 2rem;
+}
+
+.auth-card {
+  padding: 2rem;
+  border-radius: 1.75rem;
+}
+
+.auth-copy h1,
+.dashboard-header h1 {
+  margin: 0.5rem 0 1rem;
+  font-size: clamp(2.5rem, 6vw, 4.5rem);
+  line-height: 0.95;
+  letter-spacing: -0.04em;
+}
+
+.eyebrow {
+  margin: 0;
+  color: #155f8f;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.summary {
+  margin: 0;
+  color: #395264;
+  font-size: 1.05rem;
+  max-width: 38rem;
+}
+
+.auth-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.auth-form label {
+  display: grid;
+  gap: 0.45rem;
+  font-weight: 600;
+}
+
+.auth-form input {
+  width: 100%;
+  padding: 0.95rem 1rem;
+  border: 1px solid rgba(18, 32, 43, 0.12);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.primary-button,
+.ghost-button {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.95rem 1.3rem;
+  cursor: pointer;
+  transition: transform 160ms ease, opacity 160ms ease;
+}
+
+.primary-button {
+  color: white;
+  background: linear-gradient(135deg, #155f8f 0%, #0c8bb0 100%);
+  box-shadow: 0 12px 26px rgba(12, 139, 176, 0.28);
+}
+
+.ghost-button {
+  color: #0e3147;
+  background: rgba(21, 95, 143, 0.08);
+}
+
+.primary-button:hover,
+.ghost-button:hover {
+  transform: translateY(-1px);
+}
+
+.primary-button:disabled,
+.ghost-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+  transform: none;
+}
+
+.auth-switch {
+  margin: 1rem 0 0;
+  color: #516777;
+}
+
+.error-banner {
+  margin: 0;
+  padding: 0.8rem 0.95rem;
+  border-radius: 0.95rem;
+  color: #8a2738;
+  background: rgba(234, 90, 104, 0.12);
+}
+
+.loading-card {
+  max-width: 30rem;
+  margin: 18vh auto 0;
+  padding: 1.4rem 1.6rem;
+  border-radius: 1.35rem;
+  text-align: center;
+}
+
+.dashboard-shell {
+  grid-template-columns: 1fr;
+  align-content: start;
+  padding-top: 1rem;
+}
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+
+.dashboard-panels {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.feature-card {
+  padding: 1.75rem;
+  border-radius: 1.5rem;
+}
+
+.feature-card h2 {
+  margin-top: 0;
+}
+
+@media (max-width: 900px) {
+  .auth-hero,
+  .dashboard-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .screen-shell {
+    padding: 1rem;
+  }
+
+  .dashboard-header {
+    flex-direction: column;
+  }
+
+  .dashboard-panels {
+    grid-template-columns: 1fr;
+  }
+}
+
